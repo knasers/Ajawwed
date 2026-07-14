@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إحصائيات الزوار</title>
+    <style>
+        @font-face {
+            font-family: "CustomFont";
+            src: url('Asset/fonts/lbc-regular-.otf') format('opentype');
+        }
+        body {
+            font-family: "CustomFont", Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            direction: rtl;
+        }
+        .container {
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 0, 255, 0.3);
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px 0;
+        }
+        h1 {
+            color: #4cc9f0;
+            font-size: 36px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        .stat-box {
+            background-color: rgba(76, 201, 240, 0.1);
+            border: 2px solid #4cc9f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px;
+            min-width: 150px;
+            text-align: center;
+        }
+        .stat-title {
+            font-size: 18px;
+            color: #f72585;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .visitor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .visitor-table th, .visitor-table td {
+            padding: 12px 15px;
+            border: 1px solid #4361ee;
+            text-align: right;
+        }
+        .visitor-table th {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: #f72585;
+            font-size: 18px;
+        }
+        .visitor-table tr:nth-child(even) {
+            background-color: rgba(76, 201, 240, 0.05);
+        }
+        .visitor-table tr:hover {
+            background-color: rgba(76, 201, 240, 0.1);
+        }
+        .back-button {
+            background-color: #f72585;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            font-family: "CustomFont", Arial, sans-serif;
+            transition: background-color 0.3s;
+        }
+        .back-button:hover {
+            background-color: #b5179e;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            background-color: #4361ee;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: "CustomFont", Arial, sans-serif;
+        }
+        .pagination button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .pagination button.active {
+            background-color: #f72585;
+        }
+        .loading {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>إحصائيات الزوار</h1>
+        
+        <div class="stats-container">
+            <div class="stat-box">
+                <div class="stat-title">الزوار الحاليين</div>
+                <div class="stat-value" id="current-visitors">-</div>
+            </div>
+            
+            <div class="stat-box">
+                <div class="stat-title">الزوار اليومي</div>
+                <div class="stat-value" id="daily-visitors">-</div>
+            </div>
+            
+            <div class="stat-box">
+                <div class="stat-title">الزوار الكلي</div>
+                <div class="stat-value" id="total-visitors">-</div>
+            </div>
+        </div>
+        
+        <h2>سجل الزوار</h2>
+        <div id="visitor-table-container">
+            <div class="loading">جاري تحميل البيانات...</div>
+        </div>
+        
+        <div class="pagination" id="pagination-container"></div>
+        
+        <button class="back-button" onclick="goBack()">العودة للعبة</button>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const visitorsPerPage = 5; // تم تغيير القيمة من 10 إلى 5
+        let allVisitors = [];
+        
+        // Load visitor statistics
+        async function loadVisitorStats() {
+            try {
+                const response = await fetch('visitor-statistics.php');
+                if (!response.ok) {
+                    throw new Error('Network response error');
+                }
+                
+                const data = await response.json();
+                
+                // Update summary statistics
+                document.getElementById('current-visitors').textContent = data.currentVisitors;
+                document.getElementById('daily-visitors').textContent = data.dailyVisitors;
+                document.getElementById('total-visitors').textContent = data.totalVisitors;
+                
+                // Save visitor list
+                allVisitors = data.visitorLog;
+                
+                // Display visitors
+                displayVisitors(1);
+                
+            } catch (error) {
+                console.error('Error loading visitor statistics:', error);
+                document.getElementById('visitor-table-container').innerHTML = 
+                    '<p style="color: #f72585; text-align: center;">حدث خطأ أثناء تحميل البيانات. يرجى المحاولة مرة أخرى لاحقاً.</p>';
+            }
+        }
+        
+        // Display visitors for a specific page
+        function displayVisitors(page) {
+            currentPage = page;
+            const startIndex = (page - 1) * visitorsPerPage;
+            const endIndex = startIndex + visitorsPerPage;
+            const visitorsToShow = allVisitors.slice(startIndex, endIndex);
+            
+            const tableContainer = document.getElementById('visitor-table-container');
+            
+            if (allVisitors.length === 0) {
+                tableContainer.innerHTML = '<p style="text-align: center;">لا يوجد زوار مسجلين حتى الآن.</p>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table class="visitor-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>التاريخ والوقت</th>
+                            <th>عنوان IP</th>
+                            <th>البلد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            visitorsToShow.forEach((visitor, index) => {
+                tableHTML += `
+                    <tr>
+                        <td>${startIndex + index + 1}</td>
+                        <td>${visitor.timestamp}</td>
+                        <td>${visitor.ip}</td>
+                        <td>${visitor.country}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            tableContainer.innerHTML = tableHTML;
+            updatePagination();
+        }
+        
+        // Update pagination controls
+        function updatePagination() {
+            const totalPages = Math.ceil(allVisitors.length / visitorsPerPage);
+            const paginationContainer = document.getElementById('pagination-container');
+            
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+            
+            let paginationHTML = `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    &lt; السابق
+                </button>
+            `;
+            
+            // Display page numbers (max 5)
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            paginationHTML += `
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    التالي &gt;
+                </button>
+            `;
+            
+            paginationContainer.innerHTML = paginationHTML;
+        }
+        
+        // Change page
+        function changePage(page) {
+            displayVisitors(page);
+            window.scrollTo(0, 0);
+        }
+        
+        // Go back to the game
+        function goBack() {
+            window.location.href = 'index.html'; // Adjust if your game's main page has a different name
+        }
+        
+        // Load statistics when page loads
+        window.onload = loadVisitorStats;
+    </script>
+</body>
+</html>

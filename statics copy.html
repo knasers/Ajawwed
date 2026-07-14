@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إحصائيات الزوار</title>
+    <!-- الخطوط والمكتبات الخارجية -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css">
+    
+    <style>
+        /* ========== الأنماط الأساسية ========== */
+        @font-face {
+            font-family: "CustomFont";
+            src: url('Asset/fonts/lbc-regular-.otf') format('opentype');
+        }
+        
+        :root {
+            --primary-color: #4cc9f0;
+            --secondary-color: #f72585;
+            --background-dark: #1a1a2e;
+            --background-light: #f2f5f7;
+            --text-light: #ffffff;
+            --text-dark: #333333;
+            --accent-color: #4361ee;
+        }
+        
+        body {
+            font-family: "CustomFont", Arial, sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            direction: rtl;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        body.light-mode {
+            background-color: var(--background-light);
+            color: var(--text-dark);
+        }
+        
+        .container {
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 0, 255, 0.3);
+            width: 95%;
+            max-width: 1200px;
+            margin: 20px 0;
+            transition: background-color 0.3s;
+        }
+        
+        body.light-mode .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        body.light-mode h1, 
+        body.light-mode h2, 
+        body.light-mode h3 {
+            color: var(--accent-color);
+        }
+        
+        /* ========== شريط التنقل ========== */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            border-bottom: 1px solid var(--accent-color);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: rgba(76, 201, 240, 0.1);
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .nav-tab.active {
+            background-color: rgba(76, 201, 240, 0.3);
+            border-color: var(--accent-color);
+            border-bottom-color: transparent;
+        }
+        
+        .nav-tab:hover {
+            background-color: rgba(76, 201, 240, 0.2);
+        }
+        
+        /* ========== صناديق الإحصائيات ========== */
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background-color: rgba(76, 201, 240, 0.1);
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px;
+            min-width: 150px;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(76, 201, 240, 0.3);
+        }
+        
+        .stat-title {
+            font-size: 16px;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        body.light-mode .stat-box {
+            background-color: rgba(76, 201, 240, 0.1);
+            border-color: var(--accent-color);
+        }
+        
+        body.light-mode .stat-title {
+            color: var(--secondary-color);
+        }
+        
+        /* ========== جدول الزوار ========== */
+        .visitor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .visitor-table th, .visitor-table td {
+            padding: 12px 15px;
+            border: 1px solid var(--accent-color);
+            text-align: right;
+        }
+        
+        .visitor-table th {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: var(--secondary-color);
+            font-size: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .visitor-table tr:nth-child(even) {
+            background-color: rgba(76, 201, 240, 0.05);
+        }
+        
+        .visitor-table tr:hover {
+            background-color: rgba(76, 201, 240, 0.15);
+        }
+        
+        body.light-mode .visitor-table th {
+            background-color: rgba(67, 97, 238, 0.2);
+        }
+        
+        body.light-mode .visitor-table tr:nth-child(even) {
+            background-color: rgba(76, 201, 240, 0.1);
+        }
+        
+        /* ========== أزرار ومدخلات ========== */
+        .button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-family: "CustomFont", Arial, sans-serif;
+            transition: background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .button i {
+            margin-left: 8px;
+        }
+        
+        .button:hover {
+            background-color: #b5179e;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        select, input {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--accent-color);
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            font-family: "CustomFont", Arial, sans-serif;
+            margin: 5px;
+        }
+        
+        body.light-mode select,
+        body.light-mode input {
+            background-color: white;
+            color: var(--text-dark);
+        }
+        
+        /* ========== الترقيم والفلترة ========== */
+        .filter-container {
+            background-color: rgba(76, 201, 240, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .filter-label {
+            margin-left: 8px;
+            font-weight: bold;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .pagination button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 3px 5px 3px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: "CustomFont", Arial, sans-serif;
+        }
+        
+        .pagination button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        
+        .pagination button.active {
+            background-color: var(--secondary-color);
+        }
+        
+        /* ========== الرسوم البيانية والخريطة ========== */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px auto;
+            max-width: 100%;
+        }
+        
+        .charts-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        
+        .chart-box {
+            flex: 1;
+            min-width: 300px;
+            margin: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        /* ========== التبويبات ========== */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* ========== الإشعارات ========== */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transform: translateX(-120%);
+            transition: transform 0.5s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification i {
+            margin-left: 10px;
+            font-size: 20px;
+        }
+        
+        /* ========== وضع الطباعة ========== */
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+            }
+            
+            .container {
+                background-color: white;
+                box-shadow: none;
+                padding: 0;
+                width: 100%;
+            }
+            
+            .button, .filter-container, .pagination, #theme-toggle, .nav-tabs {
+                display: none !important;
+            }
+            
+            .stat-box {
+                border: 1px solid #333;
+            }
+            
+            .chart-container {
+                height: 200px;
+                page-break-inside: avoid;
+            }
+            
+            h1, h2, h3, .stat-title {
+                color: #333;
+            }
+            
+            #map {
+                height: 300px;
+            }
+            
+            .tab-content {
+                display: block !important;
+            }
+            
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            
+            .print-footer {
+                display: block !important;
+                text-align: center;
+                margin-top: 20px;
+                border-top: 1px solid #ccc;
+                padding-top: 10px;
+            }
+        }
+        
+        .print-header, .print-footer {
+            display: none;
+        }
+        
+        /* ========== مؤشر التحميل ========== */
+        .loading {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        
+        #loading-spinner {
+            border: 4px solid rgba(76, 201, 240, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--secondary-color);
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- الإشعارات -->
+    <div class="notification" id="notification">
+        <i class="fas fa-bell"></i>
+        <span id="notification-text"></span>
+    </div>
+    
+    <!-- رأس الطباعة -->
+    <div class="print-header">
+        <h1>تقرير إحصائيات الزوار</h1>
+        <p>تم إنشاؤه في: <span id="print-date"></span></p>
+    </div>
+    
+    <div class="container">
+        <!-- زر تبديل المظهر -->
+        <div style="text-align: left; margin-bottom: 10px;">
+            <button id="theme-toggle" class="button">
+                <i class="fas fa-moon"></i>
+                وضع مظلم/فاتح
+            </button>
+        </div>
+        
+        <h1>إحصائيات الزوار</h1>
+        
+        <!-- شريط التبويبات -->
+        <div class="nav-tabs">
+            <div class="nav-tab active" data-tab="overview">نظرة عامة</div>
+            <div class="nav-tab" data-tab="detailed">تفاصيل الزوار</div>
+            <div class="nav-tab" data-tab="charts">الرسومات البيانية</div>
+            <div class="nav-tab" data-tab="map">الخريطة التفاعلية</div>
+            <div class="nav-tab" data-tab="pages">الصفحات الأكثر زيارة</div>
+        </div>
+        
+        <!-- محتوى التبويب: نظرة عامة -->
+        <div id="overview" class="tab-content active">
+            <div class="stats-container">
+                <div class="stat-box">
+                    <div class="stat-title">الزوار الحاليين</div>
+                    <div class="stat-value" id="current-visitors">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">الزوار اليوم</div>
+                    <div class="stat-value" id="daily-visitors">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">الزوار هذا الأسبوع</div>
+                    <div class="stat-value" id="weekly-visitors">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">الزوار هذا الشهر</div>
+                    <div class="stat-value" id="monthly-visitors">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">إجمالي الزوار</div>
+                    <div class="stat-value" id="total-visitors">-</div>
+                </div>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stat-box">
+                    <div class="stat-title">متوسط وقت الزيارة</div>
+                    <div class="stat-value" id="avg-visit-time">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">معدل الارتداد</div>
+                    <div class="stat-value" id="bounce-rate">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">معدل التحويل</div>
+                    <div class="stat-value" id="conversion-rate">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">سرعة التحميل</div>
+                    <div class="stat-value" id="load-time">-</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="visitors-trend-chart"></canvas>
+            </div>
+            
+            <div class="button-group">
+                <button class="button" id="print-stats">
+                    <i class="fas fa-print"></i>
+                    طباعة الإحصائيات
+                </button>
+                <button class="button" id="export-overview">
+                    <i class="fas fa-file-export"></i>
+                    تصدير البيانات
+                </button>
+            </div>
+        </div>
+        
+        <!-- محتوى التبويب: تفاصيل الزوار -->
+        <div id="detailed" class="tab-content">
+            <div class="filter-container">
+                <div class="filter-group">
+                    <span class="filter-label">التاريخ من:</span>
+                    <input type="date" id="date-from">
+                    <span class="filter-label">إلى:</span>
+                    <input type="date" id="date-to">
+                </div>
+                
+                <div class="filter-group">
+                    <span class="filter-label">البلد:</span>
+                    <select id="country-filter">
+                        <option value="">الكل</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <span class="filter-label">المتصفح:</span>
+                    <select id="browser-filter">
+                        <option value="">الكل</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <span class="filter-label">نظام التشغيل:</span>
+                    <select id="os-filter">
+                        <option value="">الكل</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button class="button" id="apply-filters">
+                        <i class="fas fa-filter"></i>
+                        تطبيق
+                    </button>
+                    <button class="button" id="reset-filters">
+                        <i class="fas fa-undo"></i>
+                        إعادة ضبط
+                    </button>
+                </div>
+            </div>
+            
+            <div class="filter-container">
+                <div class="filter-group">
+                    <span class="filter-label">عدد السجلات في الصفحة:</span>
+                    <select id="records-per-page">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button class="button" id="export-visitors">
+                        <i class="fas fa-file-excel"></i>
+                        تصدير إلى Excel
+                    </button>
+                    <button class="button" id="export-csv">
+                        <i class="fas fa-file-csv"></i>
+                        تصدير إلى CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div id="visitor-table-container">
+                <div class="loading">
+                    <div id="loading-spinner"></div>
+                    جاري تحميل البيانات...
+                </div>
+            </div>
+            
+            <div class="pagination" id="pagination-container"></div>
+        </div>
+        
+        <!-- محتوى التبويب: الرسومات البيانية -->
+        <div id="charts" class="tab-content">
+            <div class="filter-container">
+                <div class="filter-group">
+                    <span class="filter-label">فترة العرض:</span>
+                    <select id="chart-time-period">
+                        <option value="day">اليوم</option>
+                        <option value="week">هذا الأسبوع</option>
+                        <option value="month">هذا الشهر</option>
+                        <option value="year">هذا العام</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button class="button" id="update-charts">
+                        <i class="fas fa-sync"></i>
+                        تحديث الرسومات
+                    </button>
+                </div>
+            </div>
+            
+            <div class="charts-row">
+                <div class="chart-box">
+                    <h3>توزيع الزوار حسب البلد</h3>
+                    <div class="chart-container">
+                        <canvas id="country-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-box">
+                    <h3>توزيع الزوار حسب المتصفح</h3>
+                    <div class="chart-container">
+                        <canvas id="browser-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="charts-row">
+                <div class="chart-box">
+                    <h3>توزيع الزوار حسب ساعات اليوم</h3>
+                    <div class="chart-container">
+                        <canvas id="hours-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-box">
+                    <h3>توزيع الزوار حسب أيام الأسبوع</h3>
+                    <div class="chart-container">
+                        <canvas id="days-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="button" id="save-charts">
+                    <i class="fas fa-image"></i>
+                    حفظ الرسومات
+                </button>
+                <button class="button" id="print-charts">
+                    <i class="fas fa-print"></i>
+                    طباعة الرسومات
+                </button>
+            </div>
+        </div>
+        
+        <!-- محتوى التبويب: الخريطة التفاعلية -->
+        <div id="map-tab" class="tab-content">
+            <h2>توزيع الزوار جغرافياً</h2>
+            <div id="map"></div>
+            
+            <div class="stats-container">
+                <div class="stat-box">
+                    <div class="stat-title">أكثر 5 دول زيارةً</div>
+                    <div id="top-countries"></div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">عدد الدول المختلفة</div>
+                    <div class="stat-value" id="unique-countries">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- محتوى التبويب: الصفحات الأكثر زيارة -->
+        <div id="pages" class="tab-content">
+            <h2>الصفحات الأكثر زيارة</h2>
+            
+            <div class="chart-container">
+                <canvas id="pages-chart"></canvas>
+            </div>
+            
+            <div id="top-pages-container">
+                <div class="loading">
+                    <div id="loading-spinner"></div>
+                    جاري تحميل البيانات...
+                </div>
+            </div>
+        </div>
+        
+        <button class="button" onclick="goBack()" style="margin-top: 20px;">
+            <i class="fas fa-arrow-right"></i>
+            العودة للعبة
+        </button>
+    </div>
+    
+    <!-- تذييل الطباعة -->
+    <div class="print-footer">
+        <p>© جميع الحقوق محفوظة - إحصائيات الزوار</p>
+    </div>
+
+    <script>
+        // ========== المتغيرات العامة ==========
+        let currentPage = 1;
+        let visitorsPerPage = 5;
+        let allVisitors = [];
+        let filteredVisitors = [];
+        let charts = {};
+        let map = null;
+        let markers = [];
+        
+        // ========== التهيئة الأولية ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            initTabs();
+            initThemeToggle();
+            setupEventListeners();
+            loadVisitorStats();
+            
+            // تهيئة تاريخ الطباعة
+            document.getElementById('print-date').textContent = new Date().toLocaleString('ar-SA');
+            
+            // تهيئة عدد السجلات في الصفحة
+            document.getElementById('records-per-page').addEventListener('change', function() {
+                visitorsPerPage = parseInt(this.value);
+                currentPage = 1;
+                displayVisitors(1);
+            });
+            
+            // تهيئة فلاتر التاريخ
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setMonth(today.getMonth() - 1);
+            
+            document.getElementById('date-from').valueAsDate = lastMonth;
+            document.getElementById('date-to').valueAsDate = today;
+        });
+        
+        // ========== تهيئة التبويبات ==========
+        function initTabs() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // إلغاء تنشيط التبويبات الحالية
+                    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // تنشيط التبويب المحدد ومحتواه
+                    this.classList.add('active');
+                    
+                    if (tabId === 'map') {
+                        document.getElementById('map-tab').classList.add('active');
+                        if (map === null) {
+                            setTimeout(initMap, 100);
+                        } else {
+                            map.invalidateSize();
+                        }
+                    } else {
+                        document.getElementById(tabId).classList.add('active');
+                    }
+                    
+                    // تحديث المخططات عند الانتقال إلى تبويب الرسومات
+                    if (tabId === 'charts' && !charts.countryChart) {
+                        initCharts();
+                    }
+                    
+                    // تحديث الصفحات الأكثر زيارة عند الانتقال إلى تبويبها
+                    if (tabId === 'pages' && !document.getElementById('pages-chart').chart) {
+                        loadTopPages();
+                    }
+                });
+            });
+        }
+        
+        // ========== تهيئة زر تبديل المظهر ==========
+        function initThemeToggle() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('visitor-stats-theme');
+            
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i> وضع مظلم/فاتح';
+            }
+            
+            themeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('light-mode');
+                const isLightMode = document.body.classList.contains('light-mode');
+                
+                if (isLightMode) {
+                    this.innerHTML = '<i class="fas fa-sun"></i> وضع مظلم/فاتح';
+                    localStorage.setItem('visitor-stats-theme', 'light');
+                } else {
+                    this.innerHTML = '<i class="fas fa-moon"></i> وضع مظلم/فاتح';
+                    localStorage.setItem('visitor-stats-theme', 'dark');
+                }
+                
+                // إعادة رسم المخططات عند تغيير المظهر
+                if (charts.countryChart) {
+                    updateChartsTheme();
+                }
+            });
+        }
+        
+        // ========== إعداد مستمعي الأحداث ==========
+        function setupEventListeners() {
+            // أزرار التصدير
+            document.getElementById('export-overview').addEventListener('click', exportOverview);
+            document.getElementById('export-visitors').addEventListener('click', exportToExcel);
+            document.getElementById('export-csv').addEventListener('click', exportToCSV);
+            
+            // أزرار الطباعة
+            document.getElementById('print-stats').addEventListener('click', printStats);
+            document.getElementById('print-charts').addEventListener('click', printCharts);
+            
+            // أزرار الفلترة
+            document.getElementById('apply-filters').addEventListener('click', applyFilters);
+            document.getElementById('reset-filters').addEventListener('click', resetFilters);
+            
+            // تحديث الرسومات
+            document.getElementById('update-charts').addEventListener('click', updateCharts);
+            
+            // حفظ الرسومات
+            document.getElementById('save-charts').addEventListener('click', saveCharts);
+        }
+        
+        // ========== تحميل إحصائيات الزوار ==========
+        function loadVisitorStats() {
+            // محاكاة تحميل البيانات من الخادم
+            setTimeout(() => {
+                // تحميل الإحصائيات العامة
+                document.getElementById('current-visitors').textContent = '45';
+                document.getElementById('daily-visitors').textContent = '782';
+                document.getElementById('weekly-visitors').textContent = '5,421';
+                document.getElementById('monthly-visitors').textContent = '23,547';
+                document.getElementById('total-visitors').textContent = '1,245,789';
+                
+                document.getElementById('avg-visit-time').textContent = '3:45';
+                document.getElementById('bounce-rate').textContent = '28%';
+                document.getElementById('conversion-rate').textContent = '5.2%';
+                document.getElementById('load-time').textContent = '1.2s';
+                
+                // تحميل بيانات الزوار
+                loadVisitorsData();
+                
+                // رسم مخطط الاتجاه
+                drawTrendChart();
+                
+                showNotification('تم تحميل الإحصائيات بنجاح');
+            }, 1000);
+        }
+        
+        // ========== تحميل بيانات الزوار التفصيلية ==========
+        function loadVisitorsData() {
+            // محاكاة تحميل البيانات من الخادم
+            setTimeout(() => {
+                // بيانات الزوار الوهمية
+                allVisitors = generateMockVisitors(200);
+                filteredVisitors = [...allVisitors];
+                
+                // إنشاء قائمة الدول والمتصفحات وأنظمة التشغيل للفلاتر
+                populateFilterOptions();
+                
+                // عرض البيانات
+                displayVisitors(1);
+                
+                // إخفاء مؤشر التحميل
+                document.querySelector('#visitor-table-container .loading').style.display = 'none';
+            }, 1500);
+        }
+        
+        // ========== إنشاء بيانات وهمية للزوار ==========
+        function generateMockVisitors(count) {
+            const countries = ['السعودية', 'مصر', 'الإمارات', 'الكويت', 'قطر', 'البحرين', 'عمان', 'الأردن', 'المغرب', 'تونس', 'الجزائر', 'العراق', 'لبنان', 'سوريا', 'فلسطين'];
+            const cities = ['الرياض', 'جدة', 'القاهرة', 'الإسكندرية', 'دبي', 'أبو ظبي', 'الدوحة', 'الكويت', 'المنامة', 'مسقط', 'عمان', 'الرباط', 'تونس', 'الجزائر', 'بغداد', 'بيروت', 'دمشق'];
+            const browsers = ['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera', 'IE', 'Samsung Browser'];
+            const os = ['Windows', 'macOS', 'iOS', 'Android', 'Linux', 'ChromeOS'];
+            const devices = ['Desktop', 'Mobile', 'Tablet'];
+            const pages = ['الرئيسية', 'عن الشركة', 'المنتجات', 'الخدمات', 'التواصل معنا', 'المدونة', 'الوظائف', 'الشروط والأحكام', 'سياسة الخصوصية'];
+            const referrers = ['Google', 'Facebook', 'Twitter', 'Instagram', 'LinkedIn', 'YouTube', 'Direct', 'Email', 'Other'];
+            
+            const visitors = [];
+            const now = new Date();
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(now.getMonth() - 1);
+            
+            for (let i = 0; i < count; i++) {
+                const visitDate = new Date(
+                    oneMonthAgo.getTime() + Math.random() * (now.getTime() - oneMonthAgo.getTime())
+                );
+                
+                const visitor = {
+                    id: i + 1,
+                    ip: `192.168.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`,
+                    country: countries[Math.floor(Math.random() * countries.length)],
+                    city: cities[Math.floor(Math.random() * cities.length)],
+                    date: visitDate.toLocaleDateString('ar-SA'),
+                    time: visitDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+                    browser: browsers[Math.floor(Math.random() * browsers.length)],
+                    os: os[Math.floor(Math.random() * os.length)],
+                    device: devices[Math.floor(Math.random() * devices.length)],
+                    page: pages[Math.floor(Math.random() * pages.length)],
+                    referrer: referrers[Math.floor(Math.random() * referrers.length)],
+                    duration: Math.floor(Math.random() * 600) + 'sec',
+                    lat: (Math.random() * 80 - 40).toFixed(6),
+                    lng: (Math.random() * 360 - 180).toFixed(6)
+                };
+                
+                visitors.push(visitor);
+            }
+            
+            return visitors;
+        }
+        
+        // ========== ملء خيارات الفلاتر ==========
+        function populateFilterOptions() {
+            const countryFilter = document.getElementById('country-filter');
+            const browserFilter = document.getElementById('browser-filter');
+            const osFilter = document.getElementById('os-filter');
+            
+            const countries = [...new Set(allVisitors.map(v => v.country))].sort();
+            const browsers = [...new Set(allVisitors.map(v => v.browser))].sort();
+            const operatingSystems = [...new Set(allVisitors.map(v => v.os))].sort();
+            
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countryFilter.appendChild(option);
+            });
+            
+            browsers.forEach(browser => {
+                const option = document.createElement('option');
+                option.value = browser;
+                option.textContent = browser;
+                browserFilter.appendChild(option);
+            });
+            
+            operatingSystems.forEach(os => {
+                const option = document.createElement('option');
+                option.value = os;
+                option.textContent = os;
+                osFilter.appendChild(option);
+            });
+        }
+        
+        // ========== عرض بيانات الزوار ==========
+        function displayVisitors(page) {
+            currentPage = page;
+            const start = (page - 1) * visitorsPerPage;
+            const end = start + visitorsPerPage;
+            const pageData = filteredVisitors.slice(start, end);
+            
+            const tableContainer = document.getElementById('visitor-table-container');
+            
+            let tableHTML = `
+                <table class="visitor-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>التاريخ</th>
+                            <th>الوقت</th>
+                            <th>الدولة</th>
+                            <th>المدينة</th>
+                            <th>المتصفح</th>
+                            <th>نظام التشغيل</th>
+                            <th>الجهاز</th>
+                            <th>الصفحة</th>
+                            <th>المدة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            pageData.forEach(visitor => {
+                tableHTML += `
+                    <tr>
+                        <td>${visitor.id}</td>
+                        <td>${visitor.date}</td>
+                        <td>${visitor.time}</td>
+                        <td>${visitor.country}</td>
+                        <td>${visitor.city}</td>
+                        <td>${visitor.browser}</td>
+                        <td>${visitor.os}</td>
+                        <td>${visitor.device}</td>
+                        <td>${visitor.page}</td>
+                        <td>${visitor.duration}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            tableContainer.innerHTML = tableHTML;
+            updatePagination();
+        }
+        
+        // ========== تحديث الترقيم ==========
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredVisitors.length / visitorsPerPage);
+            const paginationContainer = document.getElementById('pagination-container');
+            paginationContainer.innerHTML = '';
+            
+            // زر الصفحة السابقة
+            const prevButton = document.createElement('button');
+            prevButton.textContent = '«';
+            prevButton.disabled = currentPage === 1;
+            prevButton.addEventListener('click', () => displayVisitors(currentPage - 1));
+            paginationContainer.appendChild(prevButton);
+            
+            // أزرار الصفحات
+            const maxButtons = 5;
+            const startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            const endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                pageButton.classList.toggle('active', i === currentPage);
+                pageButton.addEventListener('click', () => displayVisitors(i));
+                paginationContainer.appendChild(pageButton);
+            }
+            
+            // زر الصفحة التالية
+            const nextButton = document.createElement('button');
+            nextButton.textContent = '»';
+            nextButton.disabled = currentPage === totalPages;
+            nextButton.addEventListener('click', () => displayVisitors(currentPage + 1));
+            paginationContainer.appendChild(nextButton);
+        }
+        
+        // ========== تطبيق الفلاتر ==========
+        function applyFilters() {
+            const countryFilter = document.getElementById('country-filter').value;
+            const browserFilter = document.getElementById('browser-filter').value;
+            const osFilter = document.getElementById('os-filter').value;
+            const dateFrom = new Date(document.getElementById('date-from').value);
+            const dateTo = new Date(document.getElementById('date-to').value);
+            
+            // إضافة يوم واحد لتاريخ الانتهاء لجعله شاملاً
+            dateTo.setDate(dateTo.getDate() + 1);
+            
+            filteredVisitors = allVisitors.filter(visitor => {
+                const visitDate = new Date(visitor.date.split('/').reverse().join('-'));
+                return (
+                    (!countryFilter || visitor.country === countryFilter) &&
+                    (!browserFilter || visitor.browser === browserFilter) &&
+                    (!osFilter || visitor.os === osFilter) &&
+                    visitDate >= dateFrom &&
+                    visitDate <= dateTo
+                );
+            });
+            
+            currentPage = 1;
+            displayVisitors(1);
+            showNotification(`تم العثور على ${filteredVisitors.length} سجل`);
+        }
+        
+        // ========== إعادة ضبط الفلاتر ==========
+        function resetFilters() {
+            document.getElementById('country-filter').value = '';
+            document.getElementById('browser-filter').value = '';
+            document.getElementById('os-filter').value = '';
+            
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setMonth(today.getMonth() - 1);
+            
+            document.getElementById('date-from').valueAsDate = lastMonth;
+            document.getElementById('date-to').valueAsDate = today;
+            
+            filteredVisitors = [...allVisitors];
+            currentPage = 1;
+            displayVisitors(1);
+            showNotification('تم إعادة ضبط الفلاتر');
+        }
+        
+        // ========== رسم مخطط الاتجاه ==========
+        function drawTrendChart() {
+            const ctx = document.getElementById('visitors-trend-chart').getContext('2d');
+            
+            // بيانات الزوار الوهمية للأيام السبعة الماضية
+            const labels = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            const data = [450, 540, 620, 495, 580, 720, 610];
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(76, 201, 240, 0.6)');
+            gradient.addColorStop(1, 'rgba(76, 201, 240, 0)');
+            
+            const chartConfig = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'عدد الزوار',
+                        data: data,
+                        backgroundColor: gradient,
+                        borderColor: '#4cc9f0',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#f72585',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: document.body.classList.contains('light-mode') ? '#333' : '#fff',
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif',
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            titleFont: {
+                                family: '"CustomFont", Arial, sans-serif',
+                                size: 14
+                            },
+                            bodyFont: {
+                                family: '"CustomFont", Arial, sans-serif',
+                                size: 14
+                            },
+                            rtl: true,
+                            titleAlign: 'right',
+                            bodyAlign: 'right'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: document.body.classList.contains('light-mode') ? '#333' : '#fff',
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif',
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: document.body.classList.contains('light-mode') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: document.body.classList.contains('light-mode') ? '#333' : '#fff',
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif',
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: document.body.classList.contains('light-mode') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const visitorsChart = new Chart(ctx, chartConfig);
+        }
+        
+        // ========== تهيئة المخططات ==========
+        function initCharts() {
+            const isLightMode = document.body.classList.contains('light-mode');
+            const textColor = isLightMode ? '#333' : '#fff';
+            const gridColor = isLightMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            
+            // مخطط توزيع الزوار حسب البلد
+            const countryCtx = document.getElementById('country-chart').getContext('2d');
+            charts.countryChart = new Chart(countryCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['السعودية', 'مصر', 'الإمارات', 'الكويت', 'قطر', 'دول أخرى'],
+                    datasets: [{
+                        data: [45, 25, 15, 8, 5, 2],
+                        backgroundColor: [
+                            '#4cc9f0', '#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#480ca8'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif',
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // مخطط توزيع الزوار حسب المتصفح
+            const browserCtx = document.getElementById('browser-chart').getContext('2d');
+            charts.browserChart = new Chart(browserCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Chrome', 'Firefox', 'Safari', 'Edge', 'أخرى'],
+                    datasets: [{
+                        data: [65, 15, 10, 7, 3],
+                        backgroundColor: [
+                            '#4cc9f0', '#4361ee', '#3a0ca3', '#7209b7', '#f72585'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif',
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // مخطط توزيع الزوار حسب ساعات اليوم
+            const hoursCtx = document.getElementById('hours-chart').getContext('2d');
+            charts.hoursChart = new Chart(hoursCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+                    datasets: [{
+                        label: 'عدد الزوار',
+                        data: [120, 80, 50, 250, 320, 280, 450, 300],
+                        backgroundColor: '#4cc9f0',
+                        borderColor: '#3a0ca3',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif'
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // مخطط توزيع الزوار حسب أيام الأسبوع
+            const daysCtx = document.getElementById('days-chart').getContext('2d');
+            charts.daysChart = new Chart(daysCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+                    datasets: [{
+                        label: 'عدد الزوار',
+                        data: [450, 540, 620, 495, 580, 720, 610],
+                        backgroundColor: '#4361ee',
+                        borderColor: '#3a0ca3',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif'
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ========== تحديث المخططات ==========
+        function updateCharts() {
+            const period = document.getElementById('chart-time-period').value;
+            
+            // محاكاة تحديث البيانات حسب الفترة المحددة
+            const countryData = generateRandomData(6);
+            const browserData = generateRandomData(5);
+            const hourData = generateRandomData(8);
+            const dayData = generateRandomData(7);
+            
+            // تحديث بيانات المخططات
+            charts.countryChart.data.datasets[0].data = countryData;
+            charts.browserChart.data.datasets[0].data = browserData;
+            charts.hoursChart.data.datasets[0].data = hourData;
+            charts.daysChart.data.datasets[0].data = dayData;
+            
+            // تحديث المخططات
+            charts.countryChart.update();
+            charts.browserChart.update();
+            charts.hoursChart.update();
+            charts.daysChart.update();
+            
+            showNotification(`تم تحديث الرسومات البيانية لفترة: ${getPeriodName(period)}`);
+        }
+        
+        // ========== تحديث سمة المخططات ==========
+        function updateChartsTheme() {
+            const isLightMode = document.body.classList.contains('light-mode');
+            const textColor = isLightMode ? '#333' : '#fff';
+            const gridColor = isLightMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            
+            // تحديث ألوان المخططات
+            Object.values(charts).forEach(chart => {
+                // تحديث ألوان النص في الأسطر
+                if (chart.options.scales) {
+                    chart.options.scales.x.ticks.color = textColor;
+                    chart.options.scales.y.ticks.color = textColor;
+                    chart.options.scales.x.grid.color = gridColor;
+                    chart.options.scales.y.grid.color = gridColor;
+                }
+                
+                // تحديث ألوان النص في وسيلة الإيضاح
+                if (chart.options.plugins.legend) {
+                    chart.options.plugins.legend.labels.color = textColor;
+                }
+                
+                chart.update();
+            });
+        }
+        
+        // ========== تهيئة الخريطة ==========
+        function initMap() {
+            // إنشاء الخريطة
+            map = L.map('map').setView([24.7136, 46.6753], 2);
+            
+            // إضافة طبقة الخريطة
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // إضافة العلامات للزوار
+            addVisitorMarkers();
+            
+            // عرض أكثر 5 دول زيارة
+            displayTopCountries();
+            
+            // عرض عدد الدول المختلفة
+            const uniqueCountries = [...new Set(allVisitors.map(v => v.country))].length;
+            document.getElementById('unique-countries').textContent = uniqueCountries;
+        }
+        
+        // ========== إضافة علامات الزوار على الخريطة ==========
+        function addVisitorMarkers() {
+            // مسح العلامات الحالية
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // إضافة 50 علامة لزوار عشوائيين
+            const maxMarkers = Math.min(50, allVisitors.length);
+            const randomVisitors = [...allVisitors].sort(() => 0.5 - Math.random()).slice(0, maxMarkers);
+            
+            randomVisitors.forEach(visitor => {
+                const marker = L.marker([visitor.lat, visitor.lng]).addTo(map);
+                marker.bindPopup(`
+                    <div dir="rtl" style="text-align: right;">
+                        <b>البلد:</b> ${visitor.country}<br>
+                        <b>المدينة:</b> ${visitor.city}<br>
+                        <b>التاريخ:</b> ${visitor.date}<br>
+                        <b>المتصفح:</b> ${visitor.browser}<br>
+                        <b>نظام التشغيل:</b> ${visitor.os}
+                    </div>
+                `);
+                markers.push(marker);
+            });
+        }
+        
+        // ========== عرض أكثر 5 دول زيارة ==========
+        function displayTopCountries() {
+            // حساب عدد الزوار حسب الدولة
+            const countryCount = {};
+            allVisitors.forEach(visitor => {
+                countryCount[visitor.country] = (countryCount[visitor.country] || 0) + 1;
+            });
+            
+            // ترتيب الدول حسب عدد الزوار
+            const sortedCountries = Object.entries(countryCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            // عرض أكثر 5 دول زيارة
+            const topCountriesElement = document.getElementById('top-countries');
+            topCountriesElement.innerHTML = '';
+            
+            sortedCountries.forEach((country, index) => {
+                const percentage = ((country[1] / allVisitors.length) * 100).toFixed(1);
+                const countryDiv = document.createElement('div');
+                countryDiv.style.margin = '10px 0';
+                countryDiv.innerHTML = `
+                    <div>${index + 1}. ${country[0]} (${percentage}%)</div>
+                    <div style="background-color: #eee; height: 10px; border-radius: 5px; margin-top: 5px;">
+                        <div style="background-color: #4cc9f0; height: 10px; border-radius: 5px; width: ${percentage}%;"></div>
+                    </div>
+                `;
+                topCountriesElement.appendChild(countryDiv);
+            });
+        }
+        
+        // ========== تحميل الصفحات الأكثر زيارة ==========
+      // ========== تحميل الصفحات الأكثر زيارة ==========
+      function loadTopPages() {
+            // بيانات وهمية للصفحات الأكثر زيارة
+            const topPages = [
+                { page: 'الصفحة الرئيسية', visits: 4250, bounceRate: '25%', avgTime: '2:35' },
+                { page: 'المنتجات', visits: 2850, bounceRate: '32%', avgTime: '3:12' },
+                { page: 'عن الشركة', visits: 1720, bounceRate: '30%', avgTime: '2:45' },
+                { page: 'التواصل معنا', visits: 1450, bounceRate: '15%', avgTime: '4:20' },
+                { page: 'المدونة', visits: 980, bounceRate: '35%', avgTime: '5:15' },
+                { page: 'الوظائف', visits: 780, bounceRate: '28%', avgTime: '2:10' },
+                { page: 'الشروط والأحكام', visits: 320, bounceRate: '65%', avgTime: '1:05' },
+                { page: 'سياسة الخصوصية', visits: 290, bounceRate: '70%', avgTime: '0:45' }
+            ];
+            
+            // رسم المخطط البياني للصفحات
+            drawPagesChart(topPages);
+            
+            // عرض جدول الصفحات الأكثر زيارة
+            displayTopPagesTable(topPages);
+            
+            // إخفاء مؤشر التحميل
+            document.querySelector('#top-pages-container .loading').style.display = 'none';
+        }
+        
+        // ========== رسم مخطط الصفحات ==========
+        function drawPagesChart(topPages) {
+            const ctx = document.getElementById('pages-chart').getContext('2d');
+            
+            const labels = topPages.map(p => p.page);
+            const data = topPages.map(p => p.visits);
+            
+            const isLightMode = document.body.classList.contains('light-mode');
+            const textColor = isLightMode ? '#333' : '#fff';
+            const gridColor = isLightMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            
+            const pagesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'عدد الزيارات',
+                        data: data,
+                        backgroundColor: '#4cc9f0',
+                        borderColor: '#3a0ca3',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif'
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    family: '"CustomFont", Arial, sans-serif'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // حفظ مرجع المخطط لاستخدامه لاحقاً
+            document.getElementById('pages-chart').chart = pagesChart;
+        }
+        
+        // ========== عرض جدول الصفحات الأكثر زيارة ==========
+        function displayTopPagesTable(topPages) {
+            const container = document.getElementById('top-pages-container');
+            
+            let tableHTML = `
+                <table class="visitor-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th>الصفحة</th>
+                            <th>عدد الزيارات</th>
+                            <th>معدل الارتداد</th>
+                            <th>متوسط وقت الزيارة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            topPages.forEach(page => {
+                tableHTML += `
+                    <tr>
+                        <td>${page.page}</td>
+                        <td>${page.visits.toLocaleString()}</td>
+                        <td>${page.bounceRate}</td>
+                        <td>${page.avgTime}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        // ========== إنشاء بيانات عشوائية للمخططات ==========
+        function generateRandomData(count) {
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                data.push(Math.floor(Math.random() * 500) + 100);
+            }
+            return data;
+        }
+        
+        // ========== الحصول على اسم الفترة ==========
+        function getPeriodName(period) {
+            const periods = {
+                'day': 'اليوم',
+                'week': 'هذا الأسبوع',
+                'month': 'هذا الشهر',
+                'year': 'هذا العام'
+            };
+            return periods[period] || period;
+        }
+        
+        // ========== تصدير البيانات العامة ==========
+        function exportOverview() {
+            const data = [
+                ['الإحصائية', 'القيمة'],
+                ['الزوار الحاليين', document.getElementById('current-visitors').textContent],
+                ['الزوار اليوم', document.getElementById('daily-visitors').textContent],
+                ['الزوار هذا الأسبوع', document.getElementById('weekly-visitors').textContent],
+                ['الزوار هذا الشهر', document.getElementById('monthly-visitors').textContent],
+                ['إجمالي الزوار', document.getElementById('total-visitors').textContent],
+                ['متوسط وقت الزيارة', document.getElementById('avg-visit-time').textContent],
+                ['معدل الارتداد', document.getElementById('bounce-rate').textContent],
+                ['معدل التحويل', document.getElementById('conversion-rate').textContent],
+                ['سرعة التحميل', document.getElementById('load-time').textContent]
+            ];
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'النظرة العامة');
+            XLSX.writeFile(workbook, 'إحصائيات_الزوار_نظرة_عامة.xlsx');
+            
+            showNotification('تم تصدير البيانات بنجاح');
+        }
+        
+        // ========== تصدير بيانات الزوار إلى ملف Excel ==========
+        function exportToExcel() {
+            const data = [['#', 'التاريخ', 'الوقت', 'الدولة', 'المدينة', 'المتصفح', 'نظام التشغيل', 'الجهاز', 'الصفحة', 'المدة']];
+            
+            filteredVisitors.forEach(visitor => {
+                data.push([
+                    visitor.id,
+                    visitor.date,
+                    visitor.time,
+                    visitor.country,
+                    visitor.city,
+                    visitor.browser,
+                    visitor.os,
+                    visitor.device,
+                    visitor.page,
+                    visitor.duration
+                ]);
+            });
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'بيانات الزوار');
+            XLSX.writeFile(workbook, 'بيانات_الزوار.xlsx');
+            
+            showNotification('تم تصدير البيانات بنجاح');
+        }
+        
+        // ========== تصدير بيانات الزوار إلى ملف CSV ==========
+        function exportToCSV() {
+            const headers = ['#', 'التاريخ', 'الوقت', 'الدولة', 'المدينة', 'المتصفح', 'نظام التشغيل', 'الجهاز', 'الصفحة', 'المدة'];
+            let csvContent = headers.join(',') + '\n';
+            
+            filteredVisitors.forEach(visitor => {
+                const row = [
+                    visitor.id,
+                    visitor.date,
+                    visitor.time,
+                    visitor.country,
+                    visitor.city,
+                    visitor.browser,
+                    visitor.os,
+                    visitor.device,
+                    visitor.page,
+                    visitor.duration
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'بيانات_الزوار.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('تم تصدير البيانات بنجاح');
+        }
+        
+        // ========== حفظ الرسومات البيانية ==========
+        function saveCharts() {
+            // تحويل المخططات إلى صور وإنشاء روابط التحميل
+            const countryChartUrl = document.getElementById('country-chart').toDataURL('image/png');
+            const browserChartUrl = document.getElementById('browser-chart').toDataURL('image/png');
+            const hoursChartUrl = document.getElementById('hours-chart').toDataURL('image/png');
+            const daysChartUrl = document.getElementById('days-chart').toDataURL('image/png');
+            
+            // إنشاء حاوية مؤقتة للروابط
+            const tempDiv = document.createElement('div');
+            tempDiv.style.display = 'none';
+            
+            // إضافة روابط التحميل
+            const charts = [
+                { url: countryChartUrl, name: 'توزيع_الزوار_حسب_البلد.png' },
+                { url: browserChartUrl, name: 'توزيع_الزوار_حسب_المتصفح.png' },
+                { url: hoursChartUrl, name: 'توزيع_الزوار_حسب_ساعات_اليوم.png' },
+                { url: daysChartUrl, name: 'توزيع_الزوار_حسب_أيام_الأسبوع.png' }
+            ];
+            
+            charts.forEach(chart => {
+                const link = document.createElement('a');
+                link.href = chart.url;
+                link.download = chart.name;
+                tempDiv.appendChild(link);
+            });
+            
+            document.body.appendChild(tempDiv);
+            
+            // النقر على الروابط لبدء التحميل
+            const links = tempDiv.querySelectorAll('a');
+            links.forEach(link => link.click());
+            
+            // إزالة الحاوية المؤقتة
+            document.body.removeChild(tempDiv);
+            
+            showNotification('تم حفظ الرسومات البيانية');
+        }
+        
+        // ========== طباعة الإحصائيات ==========
+        function printStats() {
+            window.print();
+        }
+        
+        // ========== طباعة الرسومات البيانية ==========
+        function printCharts() {
+            // الانتقال إلى تبويب الرسومات قبل الطباعة
+            document.querySelector('.nav-tab[data-tab="charts"]').click();
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+        
+        // ========== عرض إشعار ==========
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+            
+            notificationText.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // ========== العودة للصفحة السابقة ==========
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html>
